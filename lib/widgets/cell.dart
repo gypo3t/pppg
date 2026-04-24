@@ -6,6 +6,7 @@ class Cell extends StatefulWidget {
   final String initialLetter;
   final FocusNode focusNode;
   final void Function(NavDir dir)? onNavigate;
+  final void Function(String letter)? onLetterChanged;
   final int? highlightStep;
   final bool dimmed;
 
@@ -14,6 +15,7 @@ class Cell extends StatefulWidget {
     required this.initialLetter,
     required this.focusNode,
     this.onNavigate,
+    this.onLetterChanged,
     this.highlightStep,
     this.dimmed = false,
   });
@@ -34,6 +36,14 @@ class _CellState extends State<Cell> {
     widget.focusNode.addListener(_onFocusChange);
   }
 
+  @override
+  void didUpdateWidget(Cell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialLetter != oldWidget.initialLetter) {
+      setState(() => _letter = widget.initialLetter.toUpperCase());
+    }
+  }
+
   void _onFocusChange() {
     setState(() => _editing = widget.focusNode.hasFocus);
   }
@@ -44,6 +54,7 @@ class _CellState extends State<Cell> {
     _inputCtrl.clear();
     if (!RegExp(r'[A-Z]').hasMatch(char)) return;
     setState(() => _letter = char);
+    widget.onLetterChanged?.call(char);
     widget.onNavigate?.call(NavDir.right);
   }
 

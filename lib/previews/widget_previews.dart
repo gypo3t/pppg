@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
-import '../widgets/boggle_grid.dart';
 import '../widgets/cell.dart';
-
-@Preview(name: 'Grille Boggle')
-Widget previewBoggleGrid() => const MaterialApp(home: BoggleGrid());
 
 @Preview(name: 'Cellule seule')
 Widget previewCell() => MaterialApp(
