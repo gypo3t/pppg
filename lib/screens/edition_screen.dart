@@ -241,6 +241,13 @@ class _EditionScreenState extends State<EditionScreen> with RouteAware {
                   600.0,
                 );
 
+          const double minButtonsWidth =
+              200.0; // largeur minimale requise pour les boutons
+
+          final useLandscapeLayout =
+              isLandscape &&
+              (constraints.maxWidth - maxGridSize - 32) >= minButtonsWidth;
+
           final grid = Padding(
             padding: const EdgeInsets.all(16),
             child: SizedBox.square(
@@ -323,7 +330,7 @@ class _EditionScreenState extends State<EditionScreen> with RouteAware {
             ],
           );
 
-          if (isLandscape) {
+          if (useLandscapeLayout) {
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
