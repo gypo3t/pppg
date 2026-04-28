@@ -5,6 +5,18 @@ class WordPath {
 
   WordPath({required this.word, required this.path, this.foundByPlayer = false});
 
+  Map<String, dynamic> toJson() => {
+        'w': word,
+        'p': path,
+        'f': foundByPlayer,
+      };
+
+  factory WordPath.fromJson(Map<String, dynamic> j) => WordPath(
+        word: j['w'] as String,
+        path: List<int>.from(j['p'] as List),
+        foundByPlayer: j['f'] as bool,
+      );
+
   int get score {
     final n = word.length;
     if (n <= 4) return 1;

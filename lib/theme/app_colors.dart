@@ -49,6 +49,18 @@ abstract final class AppColors {
   static const score5 = Color(0xFFFB8C00); // orange.600 — chaud conservé
   static const scoreMax = Color(0xFFE53935); // red.600
 
+  // ── Surfaces & layout ────────────────────────────────────────────
+  /// Fond crème commun à tous les écrans
+  static const scaffoldBg = Color(0xFFF2EDE6);
+  /// Bordure des cartes blanches
+  static const cardBorder = Color(0xFFDDD5C8);
+  /// Séparateur interne des cartes
+  static const cardDivider = Color(0xFFEDE8E0);
+  /// Ligne des titres de section
+  static const sectionLine = Color(0xFFBBAA82);
+  /// Ombre des cartes
+  static const cardShadow = Color(0x28000000);
+
   // ── Neutres ───────────────────────────────────────────────────────
   static const grey100 = Color(0xFFF5F5F5);
   static const grey200 = Color(0xFFEEEEEE);

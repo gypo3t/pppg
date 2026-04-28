@@ -10,6 +10,7 @@ import '../models/word_path.dart';
 import '../route_observer.dart';
 import '../services/boggle_solver.dart';
 import '../services/dictionary_service.dart';
+import '../widgets/app_card.dart';
 import '../widgets/boggle_app_bar.dart';
 import '../widgets/boggle_grid_widget.dart';
 import 'settings_screen.dart';
@@ -123,19 +124,20 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
   }
 
   void _recordStats() {
-    if (_statsRecorded) return;
-    if (_playerFoundWords.isNotEmpty || _gameOver) {
-      SessionStats.recordGame(
-        playerWords: _playerFoundWords.length,
-        solutionWords: _words.length,
-      );
-      SessionStats.recordLastGame(
-        words: _words,
-        letters: _letters,
-        gridSize: _gridSize,
-      );
-      _statsRecorded = true;
-    }
+    if (_statsRecorded || !_gameStarted || _words.isEmpty) return;
+    final totalScore = _words.fold<int>(0, (s, w) => s + w.score);
+    SessionStats.recordGame(
+      playerWords: _playerFoundWords.length,
+      solutionWords: _words.length,
+      playerScore: _playerScore,
+      totalScore: totalScore,
+    );
+    SessionStats.recordLastGame(
+      words: _words,
+      letters: _letters,
+      gridSize: _gridSize,
+    );
+    _statsRecorded = true;
   }
 
   void _startGame() {
@@ -180,6 +182,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
       _solved = true;
       _solving = false;
     });
+    if (_gameOver) _recordStats();
     if (_pendingNavToSolver) _goToSolverAuto();
   }
 
@@ -367,6 +370,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.scaffoldBg,
       appBar: BoggleAppBar(
         activeScreen: BoggleScreen.game,
         contextual: [_buildAppBarTimer()],
@@ -416,9 +420,9 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
             context,
             MaterialPageRoute(
               builder: (_) => StatsScreen(
-                words: SessionStats.lastWords,
-                letters: SessionStats.lastLetters,
-                gridSize: SessionStats.lastGridSize,
+                words: _words.isNotEmpty ? _words : SessionStats.lastWords,
+                letters: _letters,
+                gridSize: _gridSize,
                 hasGameBelow: !_gameOver,
               ),
             ),
@@ -507,7 +511,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
               children: [
                 Align(alignment: Alignment.topCenter, child: gridColumn),
                 if (!_gameOver && AppSettings.showTextInput) _buildInputRow(),
-                Expanded(child: _buildHistoryList()),
+                Expanded(child: _buildHistoryCard()),
               ],
             );
           } else {
@@ -521,7 +525,9 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
                     children: [
                       if (!_gameOver && AppSettings.showTextInput)
                         _buildInputRow(),
-                      Expanded(child: _buildHistoryList()),
+                      Expanded(
+                        child: _buildHistoryCard(alignment: Alignment.topLeft),
+                      ),
                     ],
                   ),
                 ),
@@ -540,19 +546,41 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
       maxScore: showMax ? _words.fold<int>(0, (s, w) => s + w.score) : null,
       wordCount: _playerFoundWords.length,
       maxWordCount: showMax ? _words.length : null,
-      leading: IconButton(
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
-        icon: const Icon(Icons.refresh, size: 18),
-        color: Colors.black45,
+
+      leading: _buildIconBadge(
+        icon: Icons.refresh,
         onPressed: _newGame,
+        margin: const EdgeInsets.only(left: 8),
       ),
-      trailing: IconButton(
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
-        icon: const Icon(Icons.lightbulb_outline, size: 18),
-        color: Colors.black45,
+      trailing: _buildIconBadge(
+        icon: Icons.lightbulb_outline,
         onPressed: _goToSolver,
+      ),
+    );
+  }
+
+  Widget _buildIconBadge({
+    required IconData icon,
+    required VoidCallback onPressed,
+    Color iconColor = AppColors.primary,
+    Color backgroundColor = AppColors.sectionLine,
+    double size = 24,
+    EdgeInsets margin = EdgeInsets.zero, // 👈
+  }) {
+    return Padding(
+      padding: margin, // 👈
+      child: Material(
+        color: backgroundColor,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: Icon(icon, size: size * 0.55, color: iconColor),
+          ),
+        ),
       ),
     );
   }
@@ -654,6 +682,18 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
       ),
     );
   }
+
+  Widget _buildHistoryCard({Alignment alignment = Alignment.topCenter}) =>
+      Padding(
+        padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+        child: Align(
+          alignment: alignment,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: AppCard.maxWidth),
+            child: AppCard.card(child: _buildHistoryList()),
+          ),
+        ),
+      );
 
   Widget _buildHistoryList() {
     if (_history.isEmpty) {

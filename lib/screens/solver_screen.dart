@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../models/app_settings.dart';
 import '../models/word_path.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_card.dart';
 import '../widgets/boggle_app_bar.dart';
 import '../widgets/boggle_grid_widget.dart';
 import 'settings_screen.dart';
@@ -151,6 +152,7 @@ class _SolverScreenState extends State<SolverScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.scaffoldBg,
       appBar: BoggleAppBar(
         activeScreen: BoggleScreen.solver,
         onGame: widget.hasGameBelow
@@ -280,6 +282,17 @@ class _SolverScreenState extends State<SolverScreen> {
             ],
           );
 
+          final wordCard = Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+            child: Align(
+              alignment: isPortrait ? Alignment.topCenter : Alignment.topLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: AppCard.maxWidth),
+                child: AppCard.card(child: wordPanel),
+              ),
+            ),
+          );
+
           final gridColumn = SizedBox(
             width: gridDisplaySize + 32,
             child: Column(
@@ -293,7 +306,7 @@ class _SolverScreenState extends State<SolverScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Align(alignment: Alignment.topCenter, child: gridColumn),
-                Expanded(child: wordPanel),
+                Expanded(child: wordCard),
               ],
             );
           } else {
@@ -301,7 +314,7 @@ class _SolverScreenState extends State<SolverScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 gridColumn,
-                Expanded(child: wordPanel),
+                Expanded(child: wordCard),
               ],
             );
           }

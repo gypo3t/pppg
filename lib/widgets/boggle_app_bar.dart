@@ -118,6 +118,8 @@ class BoggleHeaderRow extends StatelessWidget {
     this.maxWordCount,
   });
 
+
+
   @override
   Widget build(BuildContext context) {
     final scoreLabel = maxScore != null ? '$score/$maxScore pts' : '$score pts';
@@ -126,14 +128,10 @@ class BoggleHeaderRow extends StatelessWidget {
         : '$wordCount mot${wordCount > 1 ? 's' : ''}';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 0),
       child: Row(
         children: [
-          Icon(
-            Icons.emoji_events_outlined,
-            size: 14,
-            color: AppColors.primary,
-          ),
+          Icon(Icons.emoji_events_outlined, size: 14, color: AppColors.primary),
           const SizedBox(width: 4),
           Expanded(
             child: Text(
@@ -150,6 +148,47 @@ class BoggleHeaderRow extends StatelessWidget {
           ?trailing,
           ?leading,
         ],
+      ),
+    );
+  }
+}
+
+// ─── IconBadge ────────────────────────────────────────────────────────────────
+
+class IconBadge extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  final Color iconColor;
+  final Color backgroundColor;
+  final double size;
+  final EdgeInsets margin;
+
+  const IconBadge({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+    this.iconColor = AppColors.primary,
+    this.backgroundColor = AppColors.sectionLine,
+    this.size = 24,
+    this.margin = EdgeInsets.zero,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: margin,
+      child: Material(
+        color: backgroundColor,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: Icon(icon, size: size * 0.55, color: iconColor),
+          ),
+        ),
       ),
     );
   }

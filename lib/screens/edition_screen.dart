@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../constants/letter_pool.dart';
 import '../models/app_settings.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_card.dart';
 import '../models/session_stats.dart';
 import 'stats_screen.dart';
 import '../models/nav_dir.dart';
@@ -176,7 +177,8 @@ class _EditionScreenState extends State<EditionScreen> with RouteAware {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Chargement du dictionnaire…')),
       );
-      return;
+      await DictionaryService.load();
+      if (!mounted) return;
     }
     setState(() => _solving = true);
     final letters = List<String>.from(_letters);
@@ -215,6 +217,7 @@ class _EditionScreenState extends State<EditionScreen> with RouteAware {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.scaffoldBg,
       appBar: BoggleAppBar(
         activeScreen: BoggleScreen.edition,
         onGame: _goToGame,
@@ -235,11 +238,8 @@ class _EditionScreenState extends State<EditionScreen> with RouteAware {
           final isLandscape = constraints.maxWidth > constraints.maxHeight;
 
           final maxGridSize = isLandscape
-              ? (constraints.maxHeight - 32).clamp(80.0, 600.0)
-              : (min(constraints.maxWidth, constraints.maxHeight) - 32).clamp(
-                  80.0,
-                  600.0,
-                );
+              ? max(80.0, constraints.maxHeight - 32)
+              : max(80.0, constraints.maxWidth - 32);
 
           const double minButtonsWidth =
               200.0; // largeur minimale requise pour les boutons
@@ -268,63 +268,50 @@ class _EditionScreenState extends State<EditionScreen> with RouteAware {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              OutlinedButton.icon(
-                onPressed: _goToGame,
-                icon: const Icon(Icons.sports_esports),
-                label: const Text('Jouer avec cette grille'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primaryBorder),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+              AppCard.sectionTitle('Jeu', Icons.sports_esports_outlined),
+              const SizedBox(height: 12),
+              AppCard.card(
+                child: Column(
+                  children: [
+                    _ActionTile(
+                      icon: Icons.sports_esports,
+                      label: 'Jouer avec cette grille',
+                      onPressed: _goToGame,
+                    ),
+                    AppCard.divider,
+                    _ActionTile(
+                      icon: Icons.lightbulb_outline,
+                      label: _solving ? 'Recherche…' : 'Solutions',
+                      onPressed: _solving ? null : _analyze,
+                      loading: _solving,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: _solving ? null : _analyze,
-                icon: _solving
-                    ? const SizedBox.square(
-                        dimension: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.lightbulb_outline),
-                label: Text(_solving ? 'Recherche…' : 'Solutions'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primaryBorder),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: _shuffle,
-                icon: const Icon(Icons.shuffle),
-                label: const Text('Mélanger'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primaryBorder),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: _exportGridToClipboard,
-                icon: const Icon(Icons.copy_outlined),
-                label: const Text('Exporter (presse-papier)'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primaryBorder),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: _importGridFromClipboard,
-                icon: const Icon(Icons.paste_outlined),
-                label: const Text('Importer (presse-papier)'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primaryBorder),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+              const SizedBox(height: 24),
+              AppCard.sectionTitle('Grille', Icons.grid_on_outlined),
+              const SizedBox(height: 12),
+              AppCard.card(
+                child: Column(
+                  children: [
+                    _ActionTile(
+                      icon: Icons.shuffle,
+                      label: 'Mélanger',
+                      onPressed: _shuffle,
+                    ),
+                    AppCard.divider,
+                    _ActionTile(
+                      icon: Icons.copy_outlined,
+                      label: 'Exporter (presse-papier)',
+                      onPressed: _exportGridToClipboard,
+                    ),
+                    AppCard.divider,
+                    _ActionTile(
+                      icon: Icons.paste_outlined,
+                      label: 'Importer (presse-papier)',
+                      onPressed: _importGridFromClipboard,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -334,35 +321,94 @@ class _EditionScreenState extends State<EditionScreen> with RouteAware {
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Grille fixe à gauche
                 grid,
-                // Boutons dans une zone défilante à droite
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(8, 16, 16, 16),
-                    child: buttons,
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 480),
+                        child: buttons,
+                      ),
+                    ),
                   ),
                 ),
               ],
             );
           }
 
-          // Portrait : mise en page originale
           return SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Center(child: grid),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
-                  child: Center(
-                    child: SizedBox(width: maxGridSize, child: buttons),
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 480),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      child: buttons,
+                    ),
                   ),
                 ),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ─── Widgets ──────────────────────────────────────────────────────────────────
+
+class _ActionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+  final bool loading;
+
+  const _ActionTile({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.loading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onPressed,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: Row(
+          children: [
+            SizedBox.square(
+              dimension: 18,
+              child: loading
+                  ? CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.primary,
+                    )
+                  : Icon(
+                      icon,
+                      size: 18,
+                      color: onPressed != null
+                          ? AppColors.primary
+                          : AppColors.black38,
+                    ),
+            ),
+            const SizedBox(width: 14),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: onPressed != null ? AppColors.black87 : AppColors.black38,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

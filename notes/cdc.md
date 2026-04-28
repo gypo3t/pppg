@@ -241,4 +241,9 @@ ecran statistiques :
 - Le passage en mode édition force à terminer la parie (avec confirmation)
 - les stats de parties n'affichent pas celles de la partie en cours mais celle de la dernière partie terminée
 
-
+#18
+stats_screen :
+- retirer infos sessions
+- conserver infos dictionnaire
+- historique des stats de partie 
+- applique thème global (plus contrasté)
