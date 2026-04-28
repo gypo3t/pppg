@@ -1,4 +1,6 @@
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import 'package:flutter/services.dart';
 import '../models/nav_dir.dart';
 
@@ -9,6 +11,7 @@ class Cell extends StatefulWidget {
   final void Function(String letter)? onLetterChanged;
   final int? highlightStep;
   final bool dimmed;
+  final bool blurLetter;
 
   const Cell({
     super.key,
@@ -18,6 +21,7 @@ class Cell extends StatefulWidget {
     this.onLetterChanged,
     this.highlightStep,
     this.dimmed = false,
+    this.blurLetter = false,
   });
 
   @override
@@ -86,16 +90,16 @@ class _CellState extends State<Cell> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFE8F0FF), Color(0xFFB8CEFF)],
+          colors: [AppColors.cellEditGradStart, AppColors.cellEditGradEnd],
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withValues(alpha: 0.55),
+            color: AppColors.cellEditBorder.withValues(alpha: 0.55),
             blurRadius: 14,
             spreadRadius: 2,
           ),
         ],
-        border: Border.all(color: Colors.blue.shade400, width: 2.5),
+        border: Border.all(color: AppColors.cellEditBorder, width: 2.5),
       );
     }
     if (widget.highlightStep != null) {
@@ -104,16 +108,16 @@ class _CellState extends State<Cell> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.orange.shade200, Colors.amber.shade400],
+          colors: [AppColors.cellGradientStart, AppColors.cellGradientEnd],
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withValues(alpha: 0.5),
+            color: AppColors.primary.withValues(alpha: 0.5),
             blurRadius: 10,
             spreadRadius: 1,
           ),
         ],
-        border: Border.all(color: Colors.orange.shade600, width: 2.5),
+        border: Border.all(color: AppColors.primary, width: 2.5),
       );
     }
     return BoxDecoration(
@@ -121,7 +125,7 @@ class _CellState extends State<Cell> {
       gradient: const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFFF9F5ED), Color(0xFFDDD3B5)],
+        colors: [AppColors.cellNormalGradStart, AppColors.cellNormalGradEnd],
       ),
       boxShadow: [
         BoxShadow(
@@ -135,7 +139,7 @@ class _CellState extends State<Cell> {
           blurRadius: 2,
         ),
       ],
-      border: Border.all(color: const Color(0xFFBBAA82), width: 1.5),
+      border: Border.all(color: AppColors.cellNormalBorder, width: 1.5),
     );
   }
 
@@ -178,18 +182,27 @@ class _CellState extends State<Cell> {
                     alignment: Alignment.center,
                     child: Padding(
                       padding: EdgeInsets.all(size * 0.1),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          _letter,
-                          style: TextStyle(
-                            fontSize: 999,
-                            fontWeight: FontWeight.bold,
-                            color: _editing
-                                ? const Color(0xFF1A237E)
-                                : widget.highlightStep != null
-                                ? Colors.orange.shade900
-                                : const Color(0xFF3E2723),
+                      child: ImageFiltered(
+                        imageFilter: widget.blurLetter
+                            ? ImageFilter.blur(
+                                sigmaX: 10,
+                                sigmaY: 10,
+                                tileMode: TileMode.decal,
+                              )
+                            : ImageFilter.blur(sigmaX: 0, sigmaY: 0),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            _letter,
+                            style: TextStyle(
+                              fontSize: 999,
+                              fontWeight: FontWeight.bold,
+                              color: _editing
+                                  ? AppColors.cellEditingText
+                                  : widget.highlightStep != null
+                                  ? AppColors.primaryDark
+                                  : AppColors.cellNormalText,
+                            ),
                           ),
                         ),
                       ),
@@ -204,7 +217,7 @@ class _CellState extends State<Cell> {
                       width: badgeSize,
                       height: badgeSize,
                       decoration: BoxDecoration(
-                        color: Colors.orange.shade700,
+                        color: AppColors.primary,
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,

@@ -8,24 +8,28 @@
             "name": "Flutter (Android physique)",
             "request": "launch",
             "type": "dart",
-            "deviceId": "192.168.1.15:46457"
+            "deviceId": "192.168.1.15:39153",
+            "preLaunchTask": "increment-build"
         },
         {
             "name": "pppg",
             "request": "launch",
-            "type": "dart"
+            "type": "dart",
+            "preLaunchTask": "increment-build"
         },
         {
             "name": "pppg (profile mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "profile"
+            "flutterMode": "profile",
+            "preLaunchTask": "increment-build"
         },
         {
             "name": "pppg (release mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "release"
+            "flutterMode": "release",
+            "preLaunchTask": "increment-build"
         }
     ]
 }

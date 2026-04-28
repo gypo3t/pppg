@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import '../models/session_stats.dart';
 import '../services/dictionary_service.dart';
 
@@ -48,7 +49,7 @@ class _StatsCardState extends State<StatsCard> {
             if (DictionaryService.loaded)
               Text(
                 'Dictionnaire : ${DictionaryService.wordCount} mots',
-                style: const TextStyle(fontSize: 12, color: Colors.black45),
+                style: const TextStyle(fontSize: 12, color: AppColors.black45),
               )
             else
               const Row(
@@ -61,7 +62,7 @@ class _StatsCardState extends State<StatsCard> {
                   SizedBox(width: 8),
                   Text(
                     'Chargement du dictionnaire…',
-                    style: TextStyle(fontSize: 12, color: Colors.black45),
+                    style: TextStyle(fontSize: 12, color: AppColors.black45),
                   ),
                 ],
               ),
@@ -75,7 +76,7 @@ class _StatsCardState extends State<StatsCard> {
     return Text(
       label,
       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-        color: Colors.black54,
+        color: AppColors.black54,
       ),
     );
   }
@@ -123,7 +124,7 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, size: 28, color: Colors.orange.shade600),
+        Icon(icon, size: 28, color: AppColors.primary),
         const SizedBox(height: 4),
         Text(
           value,
@@ -131,7 +132,7 @@ class _StatItem extends StatelessWidget {
         ),
         Text(
           label,
-          style: const TextStyle(fontSize: 11, color: Colors.black54),
+          style: const TextStyle(fontSize: 11, color: AppColors.black54),
         ),
       ],
     );

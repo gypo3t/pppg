@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import 'package:flutter/services.dart';
-import '../widgets/settings_dialog.dart';
+import 'settings_screen.dart';
 
 class ExportScreen extends StatefulWidget {
   final List<String> letters;
@@ -73,8 +74,7 @@ class _ExportScreenState extends State<ExportScreen> {
   }
 
   Future<void> _openSettings() async {
-    final result = await showSettingsDialog(context);
-    if (result != null) result.apply();
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
   }
 
   @override
@@ -103,8 +103,8 @@ class _ExportScreenState extends State<ExportScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                border: Border.all(color: Colors.grey.shade300),
+                color: AppColors.grey100,
+                border: Border.all(color: AppColors.grey300),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -135,7 +135,7 @@ class _ExportScreenState extends State<ExportScreen> {
                     icon: const Icon(Icons.save),
                     label: const Text('Sauvegarder'),
                     style: FilledButton.styleFrom(
-                      backgroundColor: Colors.orange.shade700,
+                      backgroundColor: AppColors.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                   ),
@@ -152,8 +152,8 @@ class _ExportScreenState extends State<ExportScreen> {
                       vertical: 14,
                       horizontal: 16,
                     ),
-                    foregroundColor: Colors.orange.shade700,
-                    side: BorderSide(color: Colors.orange.shade300),
+                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: AppColors.primaryBorder),
                   ),
                 ),
               ],
@@ -162,12 +162,12 @@ class _ExportScreenState extends State<ExportScreen> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Icon(Icons.error_outline, color: Colors.red.shade600, size: 18),
+                  Icon(Icons.error_outline, color: AppColors.errorMid, size: 18),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _error!,
-                      style: TextStyle(color: Colors.red.shade700),
+                      style: TextStyle(color: AppColors.error),
                     ),
                   ),
                 ],
@@ -179,7 +179,7 @@ class _ExportScreenState extends State<ExportScreen> {
                 children: [
                   Icon(
                     Icons.check_circle,
-                    color: Colors.green.shade600,
+                    color: AppColors.success,
                     size: 18,
                   ),
                   const SizedBox(width: 8),
@@ -187,7 +187,7 @@ class _ExportScreenState extends State<ExportScreen> {
                     child: Text(
                       'Sauvegardé : $_savedPath',
                       style: TextStyle(
-                        color: Colors.green.shade700,
+                        color: AppColors.successDark,
                         fontSize: 13,
                       ),
                     ),

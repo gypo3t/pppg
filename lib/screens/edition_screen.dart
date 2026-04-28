@@ -1,16 +1,19 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../constants/letter_pool.dart';
 import '../models/app_settings.dart';
+import '../theme/app_colors.dart';
+import '../models/session_stats.dart';
+import 'stats_screen.dart';
 import '../models/nav_dir.dart';
 import '../services/boggle_solver.dart';
 import '../services/dictionary_service.dart';
+import '../route_observer.dart';
+import '../widgets/boggle_app_bar.dart';
 import '../widgets/boggle_grid_widget.dart';
-import '../widgets/menu_row.dart' show popItem;
-import '../widgets/settings_dialog.dart';
-import 'export_screen.dart';
+import 'settings_screen.dart';
 import 'game_screen.dart';
-import 'import_screen.dart';
 import 'solver_screen.dart';
 
 class EditionScreen extends StatefulWidget {
@@ -23,7 +26,7 @@ class EditionScreen extends StatefulWidget {
   State<EditionScreen> createState() => _EditionScreenState();
 }
 
-class _EditionScreenState extends State<EditionScreen> {
+class _EditionScreenState extends State<EditionScreen> with RouteAware {
   late int _gridSize;
   late List<String> _letters;
   late List<FocusNode> _focusNodes;
@@ -47,7 +50,38 @@ class _EditionScreenState extends State<EditionScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
+  void didPopNext() {
+    final newSize = AppSettings.gridSize;
+    final last = SessionStats.lastLetters;
+
+    if (newSize != _gridSize) {
+      // Taille changée
+      for (final fn in _focusNodes) fn.dispose();
+      setState(() {
+        _gridSize = newSize;
+        _letters = (last != null && last.length == newSize * newSize)
+            ? List.of(last) // lastLetters correspond à la nouvelle taille
+            : generateGrid(newSize); // sinon on régénère
+        _initNodes();
+      });
+    } else if (last != null && last.length == _gridSize * _gridSize) {
+      // Taille identique, on restaure les lettres
+      setState(() {
+        _letters = List.of(last);
+        _cellKeys = List.generate(_gridSize * _gridSize, (_) => UniqueKey());
+      });
+    }
+  }
+
+  @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     for (final fn in _focusNodes) {
       fn.dispose();
     }
@@ -58,8 +92,7 @@ class _EditionScreenState extends State<EditionScreen> {
     final row = index ~/ _gridSize;
     final next = switch (dir) {
       NavDir.left => index > 0 ? index - 1 : index,
-      NavDir.right =>
-        index < _gridSize * _gridSize - 1 ? index + 1 : index,
+      NavDir.right => index < _gridSize * _gridSize - 1 ? index + 1 : index,
       NavDir.up => row > 0 ? index - _gridSize : index,
       NavDir.down => row < _gridSize - 1 ? index + _gridSize : index,
     };
@@ -75,21 +108,24 @@ class _EditionScreenState extends State<EditionScreen> {
       for (final fn in _focusNodes) {
         fn.dispose();
       }
+      _gridSize = AppSettings.gridSize;
       _letters = generateGrid(_gridSize);
       _initNodes();
     });
   }
 
   Future<void> _openSettings() async {
-    final result = await showSettingsDialog(context);
-    if (result == null || !mounted) return;
-    result.apply();
-    if (result.gridSize != _gridSize) {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+    );
+    if (!mounted) return;
+    if (AppSettings.gridSize != _gridSize) {
+      for (final fn in _focusNodes) {
+        fn.dispose();
+      }
       setState(() {
-        for (final fn in _focusNodes) {
-          fn.dispose();
-        }
-        _gridSize = result.gridSize;
+        _gridSize = AppSettings.gridSize;
         _letters = generateGrid(_gridSize);
         _initNodes();
       });
@@ -98,29 +134,41 @@ class _EditionScreenState extends State<EditionScreen> {
     }
   }
 
-  Future<void> _goToImport() async {
-    final newLetters = await Navigator.push<List<String>>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ImportScreen(
-          expectedSize: _gridSize * _gridSize,
-          gridN: _gridSize,
-        ),
-      ),
-    );
-    if (newLetters != null && mounted) {
-      setState(() => _letters = newLetters);
-    }
+  String get _gridContent {
+    final n = _gridSize;
+    return List.generate(
+      n,
+      (r) => _letters.sublist(r * n, r * n + n).join(),
+    ).join('\n');
   }
 
-  void _goToExport() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            ExportScreen(letters: _letters, gridSize: _gridSize),
-      ),
+  void _exportGridToClipboard() {
+    Clipboard.setData(ClipboardData(text: _gridContent));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Grille copiée dans le presse-papier')),
     );
+  }
+
+  Future<void> _importGridFromClipboard() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text ?? '';
+    final letters = text
+        .toUpperCase()
+        .replaceAll(RegExp(r'[^A-Z]'), '')
+        .split('');
+    final expected = _gridSize * _gridSize;
+    if (letters.length < expected) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Pas assez de lettres (${letters.length}/$expected)'),
+            backgroundColor: AppColors.errorMid,
+          ),
+        );
+      }
+      return;
+    }
+    setState(() => _letters = letters.sublist(0, expected));
   }
 
   Future<void> _analyze() async {
@@ -167,117 +215,141 @@ class _EditionScreenState extends State<EditionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.home_outlined),
-          tooltip: 'Accueil',
-          onPressed: () =>
-              Navigator.of(context).popUntil((r) => r.isFirst),
-        ),
-        title: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.grid_on_outlined, size: 18),
-            SizedBox(width: 8),
-            Text('Édition'),
-          ],
-        ),
-        actions: [
-          PopupMenuButton<void>(
-            icon: const Icon(Icons.menu),
-            itemBuilder: (_) => [
-              popItem(Icons.sports_esports_outlined, 'Jouer avec cette grille', _goToGame),
-              PopupMenuItem<void>(
-                onTap: _solving ? null : _analyze,
-                enabled: !_solving,
-                height: 40,
-                child: Row(
-                  children: [
-                    _solving
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.list_alt_outlined, size: 18),
-                    const SizedBox(width: 12),
-                    const Text('Solutions', style: TextStyle(fontSize: 14)),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              popItem(Icons.file_open_outlined, 'Importer', _goToImport),
-              popItem(Icons.save_alt_outlined, 'Exporter', _goToExport),
-              popItem(Icons.shuffle, 'Mélanger', _shuffle),
-              const PopupMenuDivider(),
-              popItem(Icons.settings_outlined, 'Paramètres', _openSettings),
-            ],
+      appBar: BoggleAppBar(
+        activeScreen: BoggleScreen.edition,
+        onGame: _goToGame,
+        onStats: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => StatsScreen(
+              words: SessionStats.lastWords,
+              letters: SessionStats.lastLetters,
+              gridSize: SessionStats.lastGridSize,
+            ),
           ),
-        ],
+        ),
+        onSettings: _openSettings,
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          // Grid fills the smaller dimension, leaving room for buttons (~120px)
-          final maxGridSize = min(
-            constraints.maxWidth - 32,
-            constraints.maxHeight - 120,
-          ).clamp(80.0, 600.0);
+          final isLandscape = constraints.maxWidth > constraints.maxHeight;
 
+          final maxGridSize = isLandscape
+              ? (constraints.maxHeight - 32).clamp(80.0, 600.0)
+              : (min(constraints.maxWidth, constraints.maxHeight) - 32).clamp(
+                  80.0,
+                  600.0,
+                );
+
+          final grid = Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox.square(
+              dimension: maxGridSize,
+              child: BoggleGridWidget(
+                letters: _letters,
+                gridSize: _gridSize,
+                focusNodes: _focusNodes,
+                cellKeys: _cellKeys,
+                editable: true,
+                onNavigate: _navigate,
+                onLetterChanged: _onLetterChanged,
+              ),
+            ),
+          );
+
+          final buttons = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _goToGame,
+                icon: const Icon(Icons.sports_esports),
+                label: const Text('Jouer avec cette grille'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: BorderSide(color: AppColors.primaryBorder),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _solving ? null : _analyze,
+                icon: _solving
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.lightbulb_outline),
+                label: Text(_solving ? 'Recherche…' : 'Solutions'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: BorderSide(color: AppColors.primaryBorder),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _shuffle,
+                icon: const Icon(Icons.shuffle),
+                label: const Text('Mélanger'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: BorderSide(color: AppColors.primaryBorder),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _exportGridToClipboard,
+                icon: const Icon(Icons.copy_outlined),
+                label: const Text('Exporter (presse-papier)'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: BorderSide(color: AppColors.primaryBorder),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _importGridFromClipboard,
+                icon: const Icon(Icons.paste_outlined),
+                label: const Text('Importer (presse-papier)'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: BorderSide(color: AppColors.primaryBorder),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ],
+          );
+
+          if (isLandscape) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Grille fixe à gauche
+                grid,
+                // Boutons dans une zone défilante à droite
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(8, 16, 16, 16),
+                    child: buttons,
+                  ),
+                ),
+              ],
+            );
+          }
+
+          // Portrait : mise en page originale
           return SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: SizedBox.square(
-                      dimension: maxGridSize,
-                      child: BoggleGridWidget(
-                        letters: _letters,
-                        gridSize: _gridSize,
-                        focusNodes: _focusNodes,
-                        cellKeys: _cellKeys,
-                        editable: true,
-                        onNavigate: _navigate,
-                        onLetterChanged: _onLetterChanged,
-                      ),
-                    ),
-                  ),
-                ),
+                Center(child: grid),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      FilledButton.icon(
-                        onPressed: _goToGame,
-                        icon: const Icon(Icons.sports_esports),
-                        label: const Text('Jouer avec cette grille'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.orange.shade700,
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      OutlinedButton.icon(
-                        onPressed: _solving ? null : _analyze,
-                        icon: _solving
-                            ? const SizedBox.square(
-                                dimension: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.search),
-                        label: Text(_solving ? 'Analyse…' : 'Analyser'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.orange.shade700,
-                          side: BorderSide(color: Colors.orange.shade300),
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                      ),
-                    ],
+                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
+                  child: Center(
+                    child: SizedBox(width: maxGridSize, child: buttons),
                   ),
                 ),
               ],

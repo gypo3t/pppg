@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'word_path.dart';
 
 class SessionStats {
   SessionStats._();
@@ -6,6 +7,21 @@ class SessionStats {
   static const _kGames = 'global_games';
   static const _kPlayerWords = 'global_player_words';
   static const _kSolutionWords = 'global_solution_words';
+
+  // Dernière partie jouée (session en cours)
+  static List<WordPath>? lastWords;
+  static List<String>? lastLetters;
+  static int? lastGridSize;
+
+  static void recordLastGame({
+    required List<WordPath> words,
+    required List<String> letters,
+    required int gridSize,
+  }) {
+    lastWords = List.of(words);
+    lastLetters = List.of(letters);
+    lastGridSize = gridSize;
+  }
 
   // Stats de la session courante
   static int sessionGames = 0;
@@ -36,6 +52,27 @@ class SessionStats {
     globalPlayerWords += playerWords;
     globalSolutionWords += solutionWords;
     _saveGlobal();
+  }
+
+  static Future<void> setGlobal({
+    required int games,
+    required int playerWords,
+    required int solutionWords,
+  }) async {
+    globalGames = games;
+    globalPlayerWords = playerWords;
+    globalSolutionWords = solutionWords;
+    await _saveGlobal();
+  }
+
+  static Future<void> resetGlobal() async {
+    globalGames = 0;
+    globalPlayerWords = 0;
+    globalSolutionWords = 0;
+    final p = await SharedPreferences.getInstance();
+    await p.remove(_kGames);
+    await p.remove(_kPlayerWords);
+    await p.remove(_kSolutionWords);
   }
 
   static Future<void> _saveGlobal() async {

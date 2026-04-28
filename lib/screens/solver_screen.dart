@@ -1,15 +1,18 @@
 import 'dart:math' show max, min;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../models/app_settings.dart';
 import '../models/word_path.dart';
+import '../theme/app_colors.dart';
 import '../widgets/boggle_app_bar.dart';
 import '../widgets/boggle_grid_widget.dart';
-import '../widgets/menu_row.dart' show popItem;
-import '../widgets/settings_dialog.dart';
-import 'edition_screen.dart';
-import 'export_screen.dart';
+import 'settings_screen.dart';
 import 'game_screen.dart';
+import 'stats_screen.dart';
 
 enum _SortMode { score, alpha, length }
+
+enum _FilterMode { all, player }
 
 class SolverScreen extends StatefulWidget {
   final List<WordPath> words;
@@ -17,6 +20,7 @@ class SolverScreen extends StatefulWidget {
   final List<String> letters;
   final int gridSize;
   final bool showFoundIndicators;
+  final bool hasGameBelow;
 
   const SolverScreen({
     super.key,
@@ -25,6 +29,7 @@ class SolverScreen extends StatefulWidget {
     required this.gridSize,
     this.searchDuration,
     this.showFoundIndicators = false,
+    this.hasGameBelow = false,
   });
 
   @override
@@ -33,25 +38,28 @@ class SolverScreen extends StatefulWidget {
 
 class _SolverScreenState extends State<SolverScreen> {
   _SortMode _sortMode = _SortMode.score;
+  _FilterMode _filterMode = _FilterMode.all;
   String? _selectedWord;
 
   List<WordPath> get _sorted {
-    final list = List<WordPath>.from(widget.words);
+    final source = _filterMode == _FilterMode.player
+        ? widget.words.where((w) => w.foundByPlayer).toList()
+        : List<WordPath>.from(widget.words);
     switch (_sortMode) {
       case _SortMode.score:
-        list.sort((a, b) {
+        source.sort((a, b) {
           final d = b.score.compareTo(a.score);
           return d != 0 ? d : a.word.compareTo(b.word);
         });
       case _SortMode.alpha:
-        list.sort((a, b) => a.word.compareTo(b.word));
+        source.sort((a, b) => a.word.compareTo(b.word));
       case _SortMode.length:
-        list.sort((a, b) {
+        source.sort((a, b) {
           final d = b.word.length.compareTo(a.word.length);
           return d != 0 ? d : a.word.compareTo(b.word);
         });
     }
-    return list;
+    return source;
   }
 
   WordPath? get _selectedPath {
@@ -62,7 +70,6 @@ class _SolverScreenState extends State<SolverScreen> {
       return null;
     }
   }
-
 
   Widget _buildHeaderRow() {
     final maxScore = widget.words.fold<int>(0, (s, w) => s + w.score);
@@ -75,159 +82,109 @@ class _SolverScreenState extends State<SolverScreen> {
       maxScore: widget.showFoundIndicators ? maxScore : null,
       wordCount: widget.showFoundIndicators ? found.length : maxWordCount,
       maxWordCount: widget.showFoundIndicators ? maxWordCount : null,
-      leading: GestureDetector(
-        onTap: () => Navigator.push(
+      trailing: IconButton(
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        icon: const Icon(Icons.copy_outlined, size: 18),
+        color: AppColors.black45,
+        onPressed: widget.words.isNotEmpty ? _exportToClipboard : null,
+      ),
+
+      leading: IconButton(
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        icon: const Icon(Icons.refresh, size: 18),
+        color: AppColors.black45,
+        onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => GameScreen(
-              initialLetters: widget.letters,
-              initialGridSize: widget.gridSize,
+              initialLetters: null,
+              initialGridSize: AppSettings.gridSize,
             ),
           ),
         ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.refresh, size: 15, color: Colors.black45),
-            SizedBox(width: 4),
-            Text(
-              'Nouvelle partie',
-              style: TextStyle(fontSize: 13, color: Colors.black45),
-            ),
-          ],
-        ),
+      ),
+    );
+  }
+
+  void _exportToClipboard() {
+    final n = widget.gridSize;
+    final gridRows = List.generate(
+      n,
+      (r) => widget.letters.sublist(r * n, r * n + n).join(),
+    ).join('\n');
+
+    final sorted = List<WordPath>.from(widget.words)
+      ..sort((a, b) {
+        final d = b.score.compareTo(a.score);
+        return d != 0 ? d : a.word.compareTo(b.word);
+      });
+    final totalScore = widget.words.fold<int>(0, (s, w) => s + w.score);
+
+    final buf = StringBuffer()
+      ..writeln(gridRows)
+      ..writeln()
+      ..writeln(
+        '--- Solutions (${widget.words.length} mots, $totalScore pts) ---',
+      );
+    for (final w in sorted) {
+      buf.writeln('${w.word} (${w.score} pt${w.score > 1 ? 's' : ''})');
+    }
+
+    Clipboard.setData(ClipboardData(text: buf.toString()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Grille et solutions copiées dans le presse-papier'),
       ),
     );
   }
 
   Future<void> _openSettings() async {
-    final result = await showSettingsDialog(context);
-    if (result != null) {
-      result.apply();
-      if (mounted) setState(() {});
-    }
-  }
-
-  void _showFullStats() {
-    final byLength = <int, List<WordPath>>{};
-    for (final wp in widget.words) {
-      (byLength[wp.word.length] ??= []).add(wp);
-    }
-    final keys = byLength.keys.toList()..sort();
-    final totalScore = widget.words.fold(0, (s, w) => s + w.score);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Statistiques complètes'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final len in keys)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(
-                    children: [
-                      Text(
-                        '$len lettres',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      const Spacer(),
-                      Text('${byLength[len]!.length} mot(s)'),
-                    ],
-                  ),
-                ),
-              const Divider(),
-              Row(
-                children: [
-                  const Text(
-                    'Score total',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '$totalScore pts',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Fermer'),
-          ),
-        ],
-      ),
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
     );
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.home_outlined),
-          tooltip: 'Accueil',
-          onPressed: () =>
-              Navigator.of(context).popUntil((r) => r.isFirst),
-        ),
-        title: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.list_alt_outlined, size: 18),
-            SizedBox(width: 8),
-            Text('Solutions'),
-          ],
-        ),
-        actions: [
-          PopupMenuButton<void>(
-            icon: const Icon(Icons.menu),
-            itemBuilder: (_) => [
-              popItem(Icons.bar_chart_outlined, 'Statistiques',
-                  widget.words.isNotEmpty ? _showFullStats : null,
-                  enabled: widget.words.isNotEmpty),
-              const PopupMenuDivider(),
-              popItem(Icons.sports_esports_outlined, 'Jouer avec cette grille', () =>
-                  Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => GameScreen(
-                      initialLetters: widget.letters,
-                      initialGridSize: widget.gridSize,
-                    ),
-                  ))),
-              popItem(Icons.grid_on_outlined, 'Éditer', () =>
-                  Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => EditionScreen(
-                      initialLetters: widget.letters,
-                      initialGridSize: widget.gridSize,
-                    ),
-                  ))),
-              popItem(Icons.upload_file_outlined, 'Exporter', () =>
-                  Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => ExportScreen(
-                      letters: widget.letters,
-                      gridSize: widget.gridSize,
-                    ),
-                  ))),
-              const PopupMenuDivider(),
-              popItem(Icons.settings_outlined, 'Paramètres', _openSettings),
-            ],
+      appBar: BoggleAppBar(
+        activeScreen: BoggleScreen.solver,
+        onGame: widget.hasGameBelow
+            ? () => Navigator.of(context).pop()
+            : () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => GameScreen(
+                    initialLetters: widget.letters,
+                    initialGridSize: widget.gridSize,
+                  ),
+                ),
+              ),
+        onEdition: () => Navigator.of(context).popUntil((r) => r.isFirst),
+        onStats: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => StatsScreen(
+              words: widget.words,
+              letters: widget.letters,
+              gridSize: widget.gridSize,
+              hasGameBelow: widget.hasGameBelow,
+            ),
           ),
-        ],
+        ),
+        onSettings: _openSettings,
       ),
       body: LayoutBuilder(
         builder: (ctx, constraints) {
           final isPortrait = constraints.maxWidth <= constraints.maxHeight;
-          final gridDisplaySize = isPortrait
-              ? min(
-                  constraints.maxWidth - 32,
-                  max(0.0, constraints.maxHeight - 112),
-                )
-              : max(0.0, constraints.maxHeight - 80);
+          final gridDisplaySize = max(
+            0.0,
+            min(constraints.maxWidth - 32, constraints.maxHeight - 64),
+          );
 
           final gridWidget = Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -251,33 +208,46 @@ class _SolverScreenState extends State<SolverScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Text(
-                      'Tri :',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.black45,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    _SortChip(
-                      label: 'Score',
-                      selected: _sortMode == _SortMode.score,
-                      onTap: () =>
-                          setState(() => _sortMode = _SortMode.score),
+                    _Chip(
+                      label: 'Toutes',
+                      selected: _filterMode == _FilterMode.all,
+                      onTap: () => setState(() {
+                        _filterMode = _FilterMode.all;
+                        _selectedWord = null;
+                      }),
                     ),
                     const SizedBox(width: 6),
-                    _SortChip(
-                      label: 'Alpha',
-                      selected: _sortMode == _SortMode.alpha,
-                      onTap: () =>
-                          setState(() => _sortMode = _SortMode.alpha),
+                    _Chip(
+                      label: 'Joueur',
+                      selected: _filterMode == _FilterMode.player,
+                      onTap: () => setState(() {
+                        _filterMode = _FilterMode.player;
+                        _selectedWord = null;
+                      }),
                     ),
-                    const SizedBox(width: 6),
-                    _SortChip(
-                      label: 'Lettres',
-                      selected: _sortMode == _SortMode.length,
-                      onTap: () =>
-                          setState(() => _sortMode = _SortMode.length),
+                    const Spacer(),
+                    PopupMenuButton<_SortMode>(
+                      padding: EdgeInsets.zero,
+                      iconSize: 20,
+                      tooltip: 'Trier',
+                      onSelected: (mode) => setState(() => _sortMode = mode),
+                      itemBuilder: (_) => [
+                        CheckedPopupMenuItem(
+                          value: _SortMode.score,
+                          checked: _sortMode == _SortMode.score,
+                          child: const Text('Score'),
+                        ),
+                        CheckedPopupMenuItem(
+                          value: _SortMode.alpha,
+                          checked: _sortMode == _SortMode.alpha,
+                          child: const Text('Alphabétique'),
+                        ),
+                        CheckedPopupMenuItem(
+                          value: _SortMode.length,
+                          checked: _sortMode == _SortMode.length,
+                          child: const Text('Longueur'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -288,7 +258,7 @@ class _SolverScreenState extends State<SolverScreen> {
                     ? const Center(
                         child: Text(
                           'Aucun mot trouvé',
-                          style: TextStyle(color: Colors.black38),
+                          style: TextStyle(color: AppColors.black38),
                         ),
                       )
                     : ListView.builder(
@@ -310,12 +280,19 @@ class _SolverScreenState extends State<SolverScreen> {
             ],
           );
 
+          final gridColumn = SizedBox(
+            width: gridDisplaySize + 32,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [_buildHeaderRow(), gridWidget],
+            ),
+          );
+
           if (isPortrait) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildHeaderRow(),
-                Align(alignment: Alignment.topCenter, child: gridWidget),
+                Align(alignment: Alignment.topCenter, child: gridColumn),
                 Expanded(child: wordPanel),
               ],
             );
@@ -323,13 +300,7 @@ class _SolverScreenState extends State<SolverScreen> {
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  width: gridDisplaySize + 32,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [_buildHeaderRow(), gridWidget],
-                  ),
-                ),
+                gridColumn,
                 Expanded(child: wordPanel),
               ],
             );
@@ -342,12 +313,12 @@ class _SolverScreenState extends State<SolverScreen> {
 
 // ─── Local widgets ────────────────────────────────────────────────────────────
 
-class _SortChip extends StatelessWidget {
+class _Chip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
-  const _SortChip({
+  const _Chip({
     required this.label,
     required this.selected,
     required this.onTap,
@@ -361,7 +332,7 @@ class _SortChip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          color: selected ? Colors.orange.shade700 : Colors.grey.shade200,
+          color: selected ? AppColors.primary : AppColors.grey200,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
@@ -369,7 +340,7 @@ class _SortChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-            color: selected ? Colors.white : Colors.black54,
+            color: selected ? Colors.white : AppColors.black54,
           ),
         ),
       ),
@@ -391,12 +362,12 @@ class _WordTile extends StatelessWidget {
   });
 
   Color _scoreColor(int score) => switch (score) {
-        1 => Colors.blueGrey.shade400,
-        2 => Colors.blue.shade500,
-        3 => Colors.teal.shade500,
-        5 => Colors.orange.shade600,
-        _ => Colors.red.shade600,
-      };
+    1 => AppColors.score1,
+    2 => AppColors.score2,
+    3 => AppColors.score3,
+    5 => AppColors.score5,
+    _ => AppColors.scoreMax,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -404,7 +375,7 @@ class _WordTile extends StatelessWidget {
     final found = wordPath.foundByPlayer;
     return Material(
       color: selected
-          ? Colors.orange.withValues(alpha: 0.08)
+          ? AppColors.primary.withValues(alpha: 0.08)
           : Colors.transparent,
       child: InkWell(
         onTap: onTap,
@@ -437,30 +408,22 @@ class _WordTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: selected ? 15 : 14,
-                    fontWeight: selected
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    color: selected
-                        ? Colors.orange.shade800
-                        : Colors.black87,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                    color: selected ? AppColors.primaryDark : AppColors.black87,
                   ),
                 ),
               ),
               Text(
                 '${wordPath.word.length}L',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Colors.black38,
-                ),
+                textScaler: TextScaler.noScaling,
+                style: const TextStyle(fontSize: 11, color: AppColors.black38),
               ),
               if (showFoundIndicator) ...[
                 const SizedBox(width: 8),
                 Icon(
-                  found
-                      ? Icons.check_circle
-                      : Icons.radio_button_unchecked,
+                  found ? Icons.check_circle : Icons.radio_button_unchecked,
                   size: 18,
-                  color: found ? Colors.green.shade600 : Colors.black12,
+                  color: found ? AppColors.success : AppColors.black12,
                 ),
               ],
             ],

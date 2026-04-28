@@ -187,3 +187,58 @@ Ecran game :
 je veux que le solver affiche le score playerScore/maxScore . playerNbWords/wordsCoutMax
 Si partie en cours maxScore et wordsCoutMax sont affichés en options (settings)
 si solver playerScore et playerNbWords s'affichent si partie jouée
+
+#11
+1.revoir appbar :
+    - retirer menu déroulant
+    - réorganiser icones : icone home, icone game (pad), icone édition (crayon), icone stats (feuille), icone paramètres (roue dentée).
+    - l'icone de l'écran actif est mis en valeur
+    - pas de texte titre, juste infobulle
+
+2. écran statistiques :
+    - un écran à part entière (pas un popup)
+    - propose stats globales et stats joueurs
+    - propose importer/exporter (grille et résultats en cours)
+
+3. écran game :
+    - buildHeaderRow affiche une icone ampoule (pour solutions) tout à droite après maxWordCount
+    * attention le buildHeaderRow n'affiche pas cette icone dans l'écran solutions
+
+#12
+- bouton "analyser" devient "solutions" avec image ampoule
+- ecran  "solutions", appbar: supprimer le premier bouton statistique (garder le 2e)
+- ecran  "solutions", appbar : retirer le bouton "exporter"
+- ecrans "solutions", placer le mini bouto "exporter" dans buildHeaderRow tout à droite après maxWordCount
+- ecran edition, la largeur des boutons ne doit pas excécer celle de la grille
+
+#13 
+- bouton statistiques affiche les stats de la dernière partie de la session en cours
+- écran statistique, ajouter bouton pour afficher écran solutions correspondant
+
+#14
+ecran solution : 
+- liste des solutions  :les fonctions de tri passent dans un menu ... (vertical) à droite
+- liste des solutuins : filtre joueurs/toutes
+
+#15
+- quitter l'écran game met la partie en pause (sauf action affichage solutions)
+- ecran game en pause floute les dés
+- statistiques : regrouper statistiques globales écran accueil avec stats parties
+- supprimer écran accueil, l'écran édition devient l'écran accueil avec icone grille (remplacer tous les icones crayons par icone grille)
+
+#16 
+ecran édition :
+- pas de menu  "..."
+
+ecran game 
+- jeu se met en pause si autre écran appelé depuis appBar
+- l'appel de l'ecran game depuis l'icone dans appBar affiche le jeu en pause si partie en cours
+
+ecran statistiques :
+- inclure statistiques globales, session et d dictionnaire
+
+#17
+- Le passage en mode édition force à terminer la parie (avec confirmation)
+- les stats de parties n'affichent pas celles de la partie en cours mais celle de la dernière partie terminée
+
+

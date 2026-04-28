@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import '../models/nav_dir.dart';
 import 'cell.dart';
 
@@ -10,6 +11,7 @@ class BoggleGridWidget extends StatefulWidget {
   final List<int>? highlightPath;
   final bool editable;
   final bool drawingEnabled;
+  final bool blurLetters;
   final void Function(int index, NavDir dir)? onNavigate;
   final void Function(int index, String letter)? onLetterChanged;
   final void Function(String word, List<int> path)? onPathCommit;
@@ -23,6 +25,7 @@ class BoggleGridWidget extends StatefulWidget {
     this.highlightPath,
     this.editable = false,
     this.drawingEnabled = false,
+    this.blurLetters = false,
     this.onNavigate,
     this.onLetterChanged,
     this.onPathCommit,
@@ -205,6 +208,7 @@ class _BoggleGridWidgetState extends State<BoggleGridWidget> {
                       : null,
               highlightStep: stepIdx >= 0 ? stepIdx : null,
               dimmed: false,
+              blurLetter: widget.blurLetters,
             );
             // Non-editable, non-drawing: cells are purely decorative.
             return (widget.drawingEnabled || !widget.editable)
@@ -286,7 +290,7 @@ class BogglePathPainter extends CustomPainter {
     const arrowHalfWidth = 5.5;
     final arrowBase = arrowTip - endUnit * arrowLen;
 
-    final color = Colors.orange.shade700.withValues(alpha: 0.85);
+    final color = AppColors.primary.withValues(alpha: 0.85);
     final linePaint = Paint()
       ..color = color
       ..strokeWidth = 3.0

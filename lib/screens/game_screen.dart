@@ -4,16 +4,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import '../constants/letter_pool.dart';
 import '../models/app_settings.dart';
+import '../theme/app_colors.dart';
 import '../models/session_stats.dart';
 import '../models/word_path.dart';
 import '../route_observer.dart';
 import '../services/boggle_solver.dart';
-import '../widgets/menu_row.dart' show popItem;
 import '../services/dictionary_service.dart';
 import '../widgets/boggle_app_bar.dart';
 import '../widgets/boggle_grid_widget.dart';
-import '../widgets/settings_dialog.dart';
+import 'settings_screen.dart';
 import 'solver_screen.dart';
+import 'stats_screen.dart';
 
 typedef _HistoryEntry = ({String word, bool valid, int score});
 
@@ -111,7 +112,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Confirmer'),
           ),
         ],
@@ -127,6 +128,11 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
       SessionStats.recordGame(
         playerWords: _playerFoundWords.length,
         solutionWords: _words.length,
+      );
+      SessionStats.recordLastGame(
+        words: _words,
+        letters: _letters,
+        gridSize: _gridSize,
       );
       _statsRecorded = true;
     }
@@ -196,6 +202,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
           letters: _letters,
           gridSize: _gridSize,
           showFoundIndicators: true,
+          hasGameBelow: true,
         ),
       ),
     );
@@ -234,12 +241,12 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
     if (word.length < 3) return;
 
     if (_playerFoundWords.containsKey(word)) {
-      _showToast('Déjà joué !', Colors.orange.shade700);
+      _showToast('Déjà joué !', AppColors.primary);
       return;
     }
 
     if (!_solved) {
-      _showToast('…', Colors.grey.shade600);
+      _showToast('…', AppColors.grey600);
       return;
     }
 
@@ -253,7 +260,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
 
     if (match == null) {
       setState(() => _history.insert(0, (word: word, valid: false, score: 0)));
-      _showToast('Refusé', Colors.red.shade600);
+      _showToast('Refusé', AppColors.errorMid);
       return;
     }
 
@@ -264,7 +271,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
       match!.foundByPlayer = true;
       _history.insert(0, (word: word, valid: true, score: score));
     });
-    _showToast('+$score pt${score > 1 ? 's' : ''}', Colors.green.shade600);
+    _showToast('+$score pt${score > 1 ? 's' : ''}', AppColors.success);
   }
 
   void _showToast(String text, Color color) {
@@ -314,7 +321,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
     _pauseTimer();
     if (!_solved) {
       if (!DictionaryService.loaded) {
-        _showToast('Dico non chargé', Colors.grey.shade600);
+        _showToast('Dico non chargé', AppColors.grey600);
         return;
       }
       await _solveBackground();
@@ -328,6 +335,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
           letters: _letters,
           gridSize: _gridSize,
           showFoundIndicators: true,
+          hasGameBelow: true,
         ),
       ),
     );
@@ -336,18 +344,18 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
 
   Future<void> _openSettings() async {
     _pauseTimer();
-    final result = await showSettingsDialog(context);
-    if (result != null) {
-      result.apply();
-      if (mounted) setState(() {});
-    }
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+    );
+    if (mounted) setState(() {});
     if (mounted && !_gameOver) _resumeTimer();
   }
 
   Color get _timerColor {
-    if (_timerRemaining <= 10) return Colors.red.shade600;
-    if (_timerRemaining <= 30) return Colors.orange.shade700;
-    return Colors.green.shade700;
+    if (_timerRemaining <= 10) return AppColors.errorMid;
+    if (_timerRemaining <= 30) return AppColors.primary;
+    return AppColors.successDark;
   }
 
   String _formatTimer(int s) {
@@ -359,50 +367,80 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.home_outlined),
-          tooltip: 'Accueil',
-          onPressed: () {
+      appBar: BoggleAppBar(
+        activeScreen: BoggleScreen.game,
+        contextual: [_buildAppBarTimer()],
+        onGame: _newGame,
+        onEdition: () async {
+          final nav = Navigator.of(context);
+          if (_gameStarted && !_gameOver) {
+            _pauseTimer();
+            final ok = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Terminer la partie'),
+                content: const Text('La partie en cours sera abandonnée.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Non'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.error,
+                    ),
+                    child: const Text('Oui'),
+                  ),
+                ],
+              ),
+            );
+            if (ok != true) {
+              if (mounted && !_gameOver) _resumeTimer();
+              return;
+            }
+            _timer?.cancel();
+            _timer = null;
+            setState(() {
+              _timerRunning = false;
+              _gameOver = true;
+            });
             _recordStats();
-            Navigator.of(context).popUntil((r) => r.isFirst);
-          },
-        ),
-        title: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.sports_esports_outlined, size: 18),
-            SizedBox(width: 8),
-            Text('Jeu'),
-          ],
-        ),
-        actions: [
-          PopupMenuButton<void>(
-            icon: const Icon(Icons.menu),
-            itemBuilder: (_) => [
-              popItem(Icons.refresh, 'Nouvelle partie', () {
-                _newGame();
-              }),
-              popItem(Icons.list_alt_outlined, 'Solutions', () {
-                _goToSolver();
-              }),
-              const PopupMenuDivider(),
-              popItem(Icons.settings_outlined, 'Paramètres', _openSettings),
-            ],
-          ),
-        ],
+          }
+          nav.popUntil((r) => r.isFirst);
+        },
+        onStats: () async {
+          _pauseTimer();
+          if (!mounted) return;
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => StatsScreen(
+                words: SessionStats.lastWords,
+                letters: SessionStats.lastLetters,
+                gridSize: SessionStats.lastGridSize,
+                hasGameBelow: !_gameOver,
+              ),
+            ),
+          );
+          if (mounted && !_gameOver) _resumeTimer();
+        },
+        onSettings: _openSettings,
       ),
       body: LayoutBuilder(
         builder: (ctx, constraints) {
           final isPortrait = constraints.maxWidth <= constraints.maxHeight;
-          final gridSize = isPortrait
-              ? min(
-                  constraints.maxWidth - 32,
-                  max(0.0, constraints.maxHeight - 112),
-                )
-              : max(0.0, constraints.maxHeight - 80);
+          final hasInput = !_gameOver && AppSettings.showTextInput;
+          final gridSize = max(
+            0.0,
+            min(
+              constraints.maxWidth - 32,
+              constraints.maxHeight - (hasInput ? 112.0 : 64.0),
+            ),
+          );
 
-          final gridWidget = Center(
+          final gridWidget = Align(
+            alignment: Alignment.topCenter,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: SizedBox.square(
@@ -414,6 +452,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
                       letters: _letters,
                       gridSize: _gridSize,
                       drawingEnabled: !_gameOver,
+                      blurLetters: _gameStarted && !_timerRunning && !_gameOver,
                       onPathCommit: _gameOver
                           ? null
                           : (word, _) => _submitWord(word),
@@ -422,11 +461,9 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: _resumeTimer,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.45),
-                          ),
-                          child: const Center(
+                        child: const DecoratedBox(
+                          decoration: BoxDecoration(color: Color(0x30000000)),
+                          child: Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -456,12 +493,19 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
             ),
           );
 
+          final gridColumn = SizedBox(
+            width: gridSize + 32,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [_buildHeaderRow(), gridWidget],
+            ),
+          );
+
           if (isPortrait) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildHeaderRow(),
-                gridWidget,
+                Align(alignment: Alignment.topCenter, child: gridColumn),
                 if (!_gameOver && AppSettings.showTextInput) _buildInputRow(),
                 Expanded(child: _buildHistoryList()),
               ],
@@ -470,13 +514,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  width: gridSize + 32,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [_buildHeaderRow(), gridWidget],
-                  ),
-                ),
+                gridColumn,
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -502,51 +540,71 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
       maxScore: showMax ? _words.fold<int>(0, (s, w) => s + w.score) : null,
       wordCount: _playerFoundWords.length,
       maxWordCount: showMax ? _words.length : null,
-      leading: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.timer_outlined, size: 15, color: _timerColor),
-          const SizedBox(width: 4),
-          Text(
-            _formatTimer(_timerRemaining),
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: _timerColor,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-          if (_gameOver) ...[
-            const SizedBox(width: 6),
-            Text(
-              '· Terminée',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.red.shade600,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ] else if (_timerRunning) ...[
-            const SizedBox(width: 4),
-            _timerBtn(icon: Icons.pause, onTap: _pauseTimer),
-          ] else ...[
-            const SizedBox(width: 4),
-            _timerBtn(icon: Icons.play_arrow, onTap: _resumeTimer),
-          ],
-        ],
+      leading: IconButton(
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        icon: const Icon(Icons.refresh, size: 18),
+        color: Colors.black45,
+        onPressed: _newGame,
+      ),
+      trailing: IconButton(
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        icon: const Icon(Icons.lightbulb_outline, size: 18),
+        color: Colors.black45,
+        onPressed: _goToSolver,
       ),
     );
   }
 
-  Widget _timerBtn({required IconData icon, required VoidCallback onTap}) {
-    return SizedBox(
-      width: 28,
-      height: 28,
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        icon: Icon(icon, size: 16),
-        color: Colors.black45,
-        onPressed: onTap,
+  Widget _buildAppBarTimer() {
+    return GestureDetector(
+      onTap: _gameOver ? null : (_timerRunning ? _pauseTimer : _resumeTimer),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_gameOver)
+              GestureDetector(
+                onTap: _newGame,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.refresh, size: 15, color: AppColors.errorMid),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Nouvelle partie',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.errorMid,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else ...[
+              Icon(
+                _timerRunning
+                    ? Icons.pause_circle_outline
+                    : Icons.play_circle_outline,
+                size: 15,
+                color: _timerColor,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                _formatTimer(_timerRemaining),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: _timerColor,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -579,10 +637,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(
-                    color: Colors.orange.shade700,
-                    width: 2,
-                  ),
+                  borderSide: BorderSide(color: AppColors.primary, width: 2),
                 ),
               ),
               onSubmitted: _submitWord,
@@ -592,7 +647,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
           IconButton(
             onPressed: () => _submitWord(_inputCtrl.text),
             icon: const Icon(Icons.check_circle_outline),
-            color: Colors.orange.shade700,
+            color: AppColors.primary,
             tooltip: 'Valider',
           ),
         ],
@@ -605,7 +660,7 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
       return Center(
         child: Text(
           _gameOver ? 'Aucun mot soumis' : 'Proposez des mots…',
-          style: const TextStyle(color: Colors.black38, fontSize: 13),
+          style: const TextStyle(color: AppColors.black38, fontSize: 13),
         ),
       );
     }
@@ -618,15 +673,15 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
           leading: Icon(
             entry.valid ? Icons.check_circle : Icons.cancel,
             size: 18,
-            color: entry.valid ? Colors.green.shade600 : Colors.red.shade400,
+            color: entry.valid ? AppColors.success : AppColors.errorLight,
           ),
           title: Text(
             entry.word,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 13,
-              color: entry.valid ? Colors.green.shade700 : Colors.red.shade600,
+              fontSize: 15,
+              color: entry.valid ? AppColors.successDark : AppColors.errorMid,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -634,14 +689,14 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
               ? Text(
                   '+${entry.score} pt${entry.score > 1 ? 's' : ''}',
                   style: TextStyle(
-                    color: Colors.green.shade700,
+                    color: AppColors.successDark,
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontSize: 15,
                   ),
                 )
               : Text(
                   'refusé',
-                  style: TextStyle(color: Colors.red.shade400, fontSize: 11),
+                  style: TextStyle(color: AppColors.errorLight, fontSize: 15),
                 ),
         );
       },

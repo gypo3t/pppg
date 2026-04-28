@@ -1,9 +1,19 @@
 import 'dart:math';
 
-const String letterPool =
-    'EEEEEEEEEEAAAAAAAIIIIIIOOOOOONNNNNNSSSSSSTTTTTTRRRRRRLLLLLUUUDDDDGGGBBCCMMPPFFHHVVWWYYKJXQZ';
+const List<String> _officialDice = [
+  'AAEEGN', 'ABBJOO', 'ACHOPS', 'AFFKPS',
+  'AOOTTW', 'CIMOTU', 'DEILRX', 'DELRVY',
+  'DISTTY', 'EEGHNW', 'EEINSU', 'EHRTVW',
+  'EIOSST', 'ELRTTY', 'HIMNQU', 'HLNNRZ',
+];
 
 List<String> generateGrid(int size) {
   final rand = Random();
-  return List.generate(size * size, (_) => letterPool[rand.nextInt(letterPool.length)]);
+  final count = size * size;
+  final dice = <String>[];
+  while (dice.length < count) {
+    final batch = [..._officialDice]..shuffle(rand);
+    dice.addAll(batch);
+  }
+  return dice.take(count).map((die) => die[rand.nextInt(6)]).toList();
 }

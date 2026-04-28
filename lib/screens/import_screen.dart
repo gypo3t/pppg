@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../widgets/settings_dialog.dart';
+import '../theme/app_colors.dart';
+import 'settings_screen.dart';
 
 class ImportScreen extends StatefulWidget {
   final int expectedSize;
@@ -92,8 +93,7 @@ class _ImportScreenState extends State<ImportScreen> {
   }
 
   Future<void> _openSettings() async {
-    final result = await showSettingsDialog(context);
-    if (result != null) result.apply();
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
   }
 
   @override
@@ -132,7 +132,7 @@ class _ImportScreenState extends State<ImportScreen> {
             FilledButton(
               onPressed: _loading ? null : _load,
               style: FilledButton.styleFrom(
-                backgroundColor: Colors.orange.shade700,
+                backgroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               child: _loading
@@ -149,7 +149,7 @@ class _ImportScreenState extends State<ImportScreen> {
               const SizedBox(height: 12),
               Text(
                 _error!,
-                style: TextStyle(color: Colors.red.shade700),
+                style: TextStyle(color: AppColors.error),
               ),
             ],
             if (_preview != null) ...[
@@ -171,7 +171,7 @@ class _ImportScreenState extends State<ImportScreen> {
                 icon: const Icon(Icons.check),
                 label: const Text('Importer cette grille'),
                 style: FilledButton.styleFrom(
-                  backgroundColor: Colors.green.shade600,
+                  backgroundColor: AppColors.success,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
               ),
@@ -212,8 +212,8 @@ class _GridPreview extends StatelessWidget {
         itemCount: letters.length,
         itemBuilder: (_, i) => Container(
           decoration: BoxDecoration(
-            color: Colors.orange.shade50,
-            border: Border.all(color: Colors.orange.shade300),
+            color: AppColors.primarySurface,
+            border: Border.all(color: AppColors.primaryBorder),
             borderRadius: BorderRadius.circular(6),
           ),
           alignment: Alignment.center,

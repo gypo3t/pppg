@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 
 class WordList extends StatelessWidget {
   final List<String> words;
@@ -18,7 +19,7 @@ class WordList extends StatelessWidget {
       return const Center(
         child: Text(
           'Aucun mot trouvé',
-          style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+          style: TextStyle(color: AppColors.grey, fontStyle: FontStyle.italic),
         ),
       );
     }
@@ -42,7 +43,7 @@ class WordList extends StatelessWidget {
           trailing: Text(
             '${word.length} pts',
             style: TextStyle(
-              color: selected ? Colors.orange.shade700 : Colors.grey,
+              color: selected ? AppColors.primary : AppColors.grey,
               fontSize: 12,
             ),
           ),

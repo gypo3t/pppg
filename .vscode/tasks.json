@@ -1,0 +1,15 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "increment-build",
+            "type": "shell",
+            "command": "python3 -c \"import re,pathlib; f=pathlib.Path('pubspec.yaml'); f.write_text(re.sub(r'(version:\\s+[\\d.]+\\+)(\\d+)', lambda m: m.group(1)+str(int(m.group(2))+1), f.read_text()))\"",
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared",
+                "showReuseMessage": false
+            }
+        }
+    ]
+}
