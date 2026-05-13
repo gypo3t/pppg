@@ -118,8 +118,6 @@ class BoggleHeaderRow extends StatelessWidget {
     this.maxWordCount,
   });
 
-
-
   @override
   Widget build(BuildContext context) {
     final scoreLabel = maxScore != null ? '$score/$maxScore pts' : '$score pts';
@@ -139,7 +137,7 @@ class BoggleHeaderRow extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: AppColors.primary,
               ),
@@ -167,9 +165,9 @@ class IconBadge extends StatelessWidget {
     super.key,
     required this.icon,
     required this.onPressed,
-    this.iconColor = AppColors.primary,
+    this.iconColor = AppColors.primarySurface,
     this.backgroundColor = AppColors.sectionLine,
-    this.size = 24,
+    this.size = 32,
     this.margin = EdgeInsets.zero,
   });
 

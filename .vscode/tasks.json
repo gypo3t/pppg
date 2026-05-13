@@ -1,15 +1,67 @@
 {
     "version": "2.0.0",
+    "inputs": [
+        {
+            "id": "adbHost",
+            "type": "promptString",
+            "description": "IP du téléphone",
+            "default": "192.168.1.15"
+        },
+        {
+            "id": "adbPort",
+            "type": "promptString",
+            "description": "Port de connexion (affiché dans Débogage sans fil)"
+        }
+    ],
     "tasks": [
         {
             "label": "increment-build",
             "type": "shell",
-            "command": "python3 -c \"import re,pathlib; f=pathlib.Path('pubspec.yaml'); f.write_text(re.sub(r'(version:\\s+[\\d.]+\\+)(\\d+)', lambda m: m.group(1)+str(int(m.group(2))+1), f.read_text()))\"",
+            "command": "python3 -c \"import re,pathlib; f=pathlib.Path('${workspaceFolder}/pubspec.yaml'); f.write_text(re.sub(r'(version:\\s+[\\d.]+\\+)(\\d+)', lambda m: m.group(1)+str(int(m.group(2))+1), f.read_text()))\"",
             "presentation": {
                 "reveal": "silent",
                 "panel": "shared",
                 "showReuseMessage": false
-            }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "ADB Connect Android",
+            "type": "shell",
+            "command": "/home/gypo3t/Android/Sdk/platform-tools/adb connect ${input:adbHost}:${input:adbPort} && /home/gypo3t/Android/Sdk/platform-tools/adb devices",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "adb-connect-silent",
+            "type": "shell",
+            "command": "/home/gypo3t/Android/Sdk/platform-tools/adb connect 192.168.1.15:34225",
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared",
+                "showReuseMessage": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "adb-connect-and-increment",
+            "dependsOrder": "sequence",
+            "dependsOn": ["increment-build"],
+            "problemMatcher": []
+        },
+        {
+            "label": "build-apk-release",
+            "type": "shell",
+            "command": "flutter build apk --release",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
         }
     ]
 }

@@ -83,19 +83,14 @@ class _SolverScreenState extends State<SolverScreen> {
       maxScore: widget.showFoundIndicators ? maxScore : null,
       wordCount: widget.showFoundIndicators ? found.length : maxWordCount,
       maxWordCount: widget.showFoundIndicators ? maxWordCount : null,
-      trailing: IconButton(
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
-        icon: const Icon(Icons.copy_outlined, size: 18),
-        color: AppColors.black45,
-        onPressed: widget.words.isNotEmpty ? _exportToClipboard : null,
+      trailing: IconBadge(
+        icon: Icons.copy_outlined,
+        onPressed: widget.words.isNotEmpty ? _exportToClipboard : () {},
+        margin: const EdgeInsets.only(right: 8),
       ),
 
-      leading: IconButton(
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
-        icon: const Icon(Icons.refresh, size: 18),
-        color: AppColors.black45,
+      leading: IconBadge(
+        icon: Icons.refresh,
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(

@@ -547,40 +547,14 @@ class _GameScreenState extends State<GameScreen> with RouteAware {
       wordCount: _playerFoundWords.length,
       maxWordCount: showMax ? _words.length : null,
 
-      leading: _buildIconBadge(
+      leading: IconBadge(
         icon: Icons.refresh,
         onPressed: _newGame,
         margin: const EdgeInsets.only(left: 8),
       ),
-      trailing: _buildIconBadge(
+      trailing: IconBadge(
         icon: Icons.lightbulb_outline,
         onPressed: _goToSolver,
-      ),
-    );
-  }
-
-  Widget _buildIconBadge({
-    required IconData icon,
-    required VoidCallback onPressed,
-    Color iconColor = AppColors.primary,
-    Color backgroundColor = AppColors.sectionLine,
-    double size = 24,
-    EdgeInsets margin = EdgeInsets.zero, // 👈
-  }) {
-    return Padding(
-      padding: margin, // 👈
-      child: Material(
-        color: backgroundColor,
-        shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onPressed,
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: Icon(icon, size: size * 0.55, color: iconColor),
-          ),
-        ),
       ),
     );
   }

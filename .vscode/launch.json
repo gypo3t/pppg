@@ -8,7 +8,7 @@
             "name": "Flutter (Android physique)",
             "request": "launch",
             "type": "dart",
-            "deviceId": "192.168.1.15:39153",
+            "deviceId": "adb-RFCR604ZPHB-g6hDjD._adb-tls-connect._tcp",
             "preLaunchTask": "increment-build"
         },
         {
@@ -29,7 +29,15 @@
             "request": "launch",
             "type": "dart",
             "flutterMode": "release",
-            "preLaunchTask": "increment-build"
+            "preLaunchTask": "adb-connect-and-increment"
+        },
+        {
+            "name": "pppg (build APK release)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release",
+            "noDebug": true,
+            "preLaunchTask": "build-apk-release"
         }
     ]
 }

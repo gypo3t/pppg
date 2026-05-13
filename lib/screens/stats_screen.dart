@@ -72,14 +72,14 @@ class _StatsScreenState extends State<StatsScreen> with RouteAware {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _DictionarySection(),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 15),
                   if (widget.words != null && widget.words!.isNotEmpty) ...[
                     _PartyStats(
                       words: widget.words!,
                       letters: widget.letters,
                       gridSize: widget.gridSize,
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 20),
                   ],
 
                   _GameHistorySection(onReset: () => setState(() {})),

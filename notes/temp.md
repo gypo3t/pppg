@@ -1,0 +1,45 @@
+# temp
+
+KIQG
+TDTS
+LYAW
+EXLI
+
+--- Solutions (37 mots, 41 pts) ---
+STYLAI (3 pts)
+STYLA (2 pts)
+STYLE (2 pts)
+AIL (1 pt)
+ASTI (1 pt)
+AXE (1 pt)
+AXEL (1 pt)
+DAIL (1 pt)
+DAL (1 pt)
+DAW (1 pt)
+DAWS (1 pt)
+DIT (1 pt)
+DITS (1 pt)
+KID (1 pt)
+KIT (1 pt)
+KITS (1 pt)
+LAD (1 pt)
+LADY (1 pt)
+LAI (1 pt)
+LAS (1 pt)
+LATS (1 pt)
+LAYE (1 pt)
+LIA (1 pt)
+LIAS (1 pt)
+LIAT (1 pt)
+SAI (1 pt)
+SAL (1 pt)
+SALI (1 pt)
+SATI (1 pt)
+SAX (1 pt)
+SAXE (1 pt)
+TAS (1 pt)
+TAXE (1 pt)
+WAD (1 pt)
+WALI (1 pt)
+WAX (1 pt)
+YAWL (1 pt)

@@ -1,6 +1,6 @@
 {
-    "name": "pppg",
-    "short_name": "pppg",
+    "name": "globber",
+    "short_name": "globber",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
