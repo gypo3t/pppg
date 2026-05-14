@@ -63,7 +63,9 @@ class _EditionScreenState extends State<EditionScreen> with RouteAware {
 
     if (newSize != _gridSize) {
       // Taille changée
-      for (final fn in _focusNodes) fn.dispose();
+      for (final fn in _focusNodes) {
+        fn.dispose();
+      }
       setState(() {
         _gridSize = newSize;
         _letters = (last != null && last.length == newSize * newSize)
@@ -404,7 +406,9 @@ class _ActionTile extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 14,
-                color: onPressed != null ? AppColors.black87 : AppColors.black38,
+                color: onPressed != null
+                    ? AppColors.black87
+                    : AppColors.black38,
               ),
             ),
           ],

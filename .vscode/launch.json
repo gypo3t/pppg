@@ -12,7 +12,7 @@
             "preLaunchTask": "increment-build"
         },
         {
-            "name": "pppg",
+            "name": "globber_linux",
             "request": "launch",
             "type": "dart",
             "preLaunchTask": "increment-build"
@@ -38,6 +38,17 @@
             "flutterMode": "release",
             "noDebug": true,
             "preLaunchTask": "build-apk-release"
+        },
+        {
+            "name": "globber (web-server)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "web-server",
+            "args": [
+                "--web-port=5000",
+                "--dart-define=SUPABASE_URL=${env:SUPABASE_URL}",
+                "--dart-define=SUPABASE_ANON_KEY=${env:SUPABASE_ANON_KEY}"
+            ]
         }
     ]
 }
